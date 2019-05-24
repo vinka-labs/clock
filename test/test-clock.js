@@ -24,22 +24,31 @@ lab.experiment('Clock', function() {
     lab.test('Multiplier validation', function(done) {
         var simClock;
 
+        simClock = new Clock(moment);
+        expect(simClock.isSimulated).to.be.false();
+
         simClock = new Clock(moment, moment());
         expect(simClock.multiplier).to.equal(1);
+        expect(simClock.isSimulated).to.be.true();
+        //
 
         simClock = new Clock(moment, moment(), -1);
         expect(simClock.multiplier).to.equal(-1);
+        expect(simClock.isSimulated).to.be.true();
 
         simClock = new Clock(moment, moment(), 0.5);
         expect(simClock.multiplier).to.equal(0.5);
+        expect(simClock.isSimulated).to.be.true();
 
         expect(() => new Clock(moment, moment(), 0)).to.throw();
 
         simClock = new Clock(moment, moment(), 55);
         expect(simClock.multiplier).to.equal(55);
+        expect(simClock.isSimulated).to.be.true();
 
         simClock = new Clock(moment, moment(), 10000);
         expect(simClock.multiplier).to.equal(10000);
+        expect(simClock.isSimulated).to.be.true();
 
         done();
     });
