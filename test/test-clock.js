@@ -104,6 +104,16 @@ lab.experiment('Clock', function() {
             }, 200);
         }, 200);
     });
+
+    lab.test('Start paused clock', done => {
+        const timesz = '2017-03-22T22:00:00Z';
+        const clock = new Clock(moment, moment(timesz), 1, true);
+        expect(clock.now().diff(moment(timesz))).to.be.equal(0);
+        setTimeout(() => {
+            expect(clock.now().diff(moment(timesz))).to.be.equal(0);
+            done();
+        }, 200);
+    });
 });
 
 lab.experiment('Clock boost', function() {

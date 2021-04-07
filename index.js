@@ -19,7 +19,7 @@ class Clock {
      *     initializes clock to current wall clock.
      * @param {number} boost - boost factor for the clock.
      */
-    constructor(moment, start, boost=1) {
+    constructor(moment, start, boost=1, paused=false) {
         assert(moment && typeof moment.isMoment === 'function', `moment instance must be given as ctor param`);
         assert(boost !== 0);
         this.moment = moment;
@@ -37,6 +37,11 @@ class Clock {
             // apply offset
             this._offset = start.diff(this.moment.utc(), 'ms');
             this._simstart = this.moment.utc().add(this._offset, 'ms');
+        }
+
+        if (paused) {
+            this._paused = this._simstart.clone();
+            this._pausedWallClock = this.moment.utc().valueOf();
         }
 
         assert(this.moment.isMoment(this._simstart) && this._simstart.isValid());
