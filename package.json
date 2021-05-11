@@ -17,8 +17,7 @@
   },
   "homepage": "https://github.com/vinka-labs/clock#readme",
   "devDependencies": {
-    "code": "^4.1.0",
-    "lab": "^14.1.1",
-    "moment": "^2.18.1"
+    "@hapi/code": "^8.0.3",
+    "@hapi/lab": "^24.2.1"
   }
 }

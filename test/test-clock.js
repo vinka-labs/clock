@@ -4,138 +4,142 @@
 
 'use strict';
 
-const Lab = require('lab');
+const Lab = require('@hapi/lab');
 const lab = exports.lab = Lab.script();
-const Code = require('code');
+const Code = require('@hapi/code');
 const expect = Code.expect;
-const moment = require('moment');
 const Clock = require('../index');
+
+const diff = (d, n = new Date(), s = false) => {
+    const dff = (n.getTime() - d.getTime());
+    return  s ? dff / 1000 : dff;
+};
 
 lab.experiment('Clock', function() {
 
-    lab.test('Set clock to now', function(done) {
-        const simClock = new Clock(moment);
-        const difference = moment().diff(simClock.now(), 'seconds');
+    lab.test('Set clock to now', function() {
+        const simClock = new Clock();
+        const difference = diff(simClock.now(), new Date(), true);
 
         expect(difference).to.be.below(1);
-        done();
     });
 
-    lab.test('Multiplier validation', function(done) {
+    lab.test('now() should return Date object', function() {
+        const simClock = new Clock();
+        expect(simClock.now()).to.be.instanceOf(Date);
+    });
+
+    lab.test('Multiplier validation', function() {
         var simClock;
 
-        simClock = new Clock(moment);
+        simClock = new Clock();
         expect(simClock.isSimulated).to.be.false();
 
-        simClock = new Clock(moment, moment());
+        simClock = new Clock(new Date());
         expect(simClock.multiplier).to.equal(1);
         expect(simClock.isSimulated).to.be.true();
-        //
 
-        simClock = new Clock(moment, moment(), -1);
+        simClock = new Clock(new Date(), -1);
         expect(simClock.multiplier).to.equal(-1);
         expect(simClock.isSimulated).to.be.true();
 
-        simClock = new Clock(moment, moment(), 0.5);
+        simClock = new Clock(new Date(), 0.5);
         expect(simClock.multiplier).to.equal(0.5);
         expect(simClock.isSimulated).to.be.true();
 
-        expect(() => new Clock(moment, moment(), 0)).to.throw();
+        expect(() => new Clock(new Date(), 0)).to.throw();
 
-        simClock = new Clock(moment, moment(), 55);
+        simClock = new Clock(new Date(), 55);
         expect(simClock.multiplier).to.equal(55);
         expect(simClock.isSimulated).to.be.true();
 
-        simClock = new Clock(moment, moment(), 10000);
+        simClock = new Clock(new Date(), 10000);
         expect(simClock.multiplier).to.equal(10000);
         expect(simClock.isSimulated).to.be.true();
-
-        done();
     });
 
-    lab.test('Check moment in today', function(done) {
-        var simClock,
-            difference;
+    lab.test('Check moment in today', function() {
+        const d = new Date();
+        d.setHours(16);
+        d.setMinutes(23);
 
-        simClock = new Clock(moment, moment().hours(16).minutes(23));
-        difference = simClock.now().diff(moment().hours(16).minutes(23), 'seconds');
+        const simClock = new Clock(d);
+        const difference = diff(d, simClock.now(), true)
         expect(difference).to.be.below(1);
-
-        done();
     });
 
-    lab.test('Check moment on arbitrary day', function(done) {
-        var simClock,
-            difference;
-
-        simClock = new Clock(moment, moment('7-4-2014 14:23', 'MM-DD-YYYY hh:mm'));
-        difference = simClock.now().diff(moment('7-4-2014 14:23', 'MM-DD-YYYY hh:mm'), 'seconds');
-        expect(difference).to.be.below(1);
-
-        done();
-    });
-
-    lab.test('Pause clock moving forward', done => {
+    lab.test('Pause clock moving forward', () => {
         const timesz = '2017-03-22T22:00:00Z';
-        const clock = new Clock(moment, moment(timesz));
+        const clock = new Clock(new Date(timesz));
         clock.pause();
 
-        setTimeout(() => {
-            expect(clock.now().diff(moment(timesz), 'ms')).to.be.about(0, 10);
-            clock.resume();
+        return new Promise((res) => {
             setTimeout(() => {
-                expect(clock.now().diff(moment(timesz), 'ms')).to.be.about(200, 10);
-                done();
+                expect(diff(new Date(timesz), clock.now())).to.be.about(0, 10);
+                clock.resume();
+                setTimeout(() => {
+                    expect(diff(new Date(timesz), clock.now())).to.be.about(200, 10);
+                    res();
+                }, 200);
             }, 200);
-        }, 200);
+        });
     });
 
-    lab.test('Pause clock moving backward', done => {
+    lab.test('Pause clock moving backward', () => {
         const timesz = '2017-03-22T22:00:00Z';
-        const clock = new Clock(moment, moment(timesz), -1);
+        const clock = new Clock(new Date(timesz), -1);
         clock.pause();
 
-        setTimeout(() => {
-            expect(clock.now().diff(moment(timesz), 'ms')).to.be.about(0, 10);
-            clock.resume();
+        return new Promise((res) => {
             setTimeout(() => {
-                expect(clock.now().diff(moment(timesz), 'ms')).to.be.about(-200, 10);
-                done();
+                expect(diff(new Date(timesz), clock.now())).to.be.about(0, 10);
+                clock.resume();
+                setTimeout(() => {
+                    expect(diff(new Date(timesz), clock.now())).to.be.about(-200, 10);
+                    res();
+                }, 200);
             }, 200);
-        }, 200);
+        });
     });
 
-    lab.test('Start paused clock', done => {
+    lab.test('Start paused clock', () => {
         const timesz = '2017-03-22T22:00:00Z';
-        const clock = new Clock(moment, moment(timesz), 1, true);
-        expect(clock.now().diff(moment(timesz))).to.be.equal(0);
-        setTimeout(() => {
-            expect(clock.now().diff(moment(timesz))).to.be.equal(0);
-            done();
-        }, 200);
+        const clock = new Clock(new Date(timesz), 1, true);
+        expect(diff(new Date(timesz), clock.now())).to.be.equal(0);
+
+        return new Promise(res => {
+            setTimeout(() => {
+                expect(diff(new Date(timesz), clock.now())).to.be.equal(0);
+                res();
+            }, 200);
+        });
     });
 });
 
-lab.experiment('Clock boost', function() {
-    lab.test('x100', function(done) {
-        const testStart = moment();
-        const simClock = new Clock(moment, testStart, 100);
+lab.experiment('Clock boost', () => {
+    lab.test('x100', function() {
+        const testStart = new Date();
+        const simClock = new Clock(testStart, 100);
 
-        setTimeout(function() {
-            const difference = Math.abs((simClock.now().unix() - (testStart.unix() + (1.5 * 100))));
-            expect(difference).to.be.below(1.1);
-            done();
-        }, 1500);
+        return new Promise(res => {
+            setTimeout(function() {
+                const difference = Math.abs((simClock.now().getTime() - (testStart.getTime() + (1500 * 100))));
+                expect(difference).to.be.below(1100);
+                res();
+            }, 1500);
+        });
     });
 
-    lab.test('x-100', function(done) {
-        const testStart = moment();
-        const simClock = new Clock(moment, testStart, -100);
+    lab.test('x-100', () => {
+        const testStart = new Date();
+        const simClock = new Clock(testStart, -100);
 
-        setTimeout(function() {
-            const difference = Math.abs((simClock.now().unix() - (testStart.unix() - (1.5 * 100))));
-            expect(difference).to.be.below(1.1);
-            done();
-        }, 1500);
+        return new Promise(res => {
+            setTimeout(function() {
+                const difference = Math.abs((simClock.now().getTime() - (testStart.getTime() - (1500 * 100))));
+                expect(difference).to.be.below(1100);
+                res();
+            }, 1500);
+        });
     });
 });
