@@ -10,19 +10,55 @@ const assert = require('assert');
 
 /// @todo clock.diff() would be nice to get scaled diff
 
+/**
+ * Date wrapper to be used only internally.
+ *
+ * This is just a collection of helper functions for Date.
+ */
+class DateWrapper {
+    constructor(sz) {
+        this._time = sz ? new Date(sz) : new Date();
+    }
+
+    static utc(timestamp) {
+        return new DateWrapper(timestamp);
+    }
+
+    diff(date) {
+        const me = this._time.getTime();
+        const you = date.getTime();
+        return me - you;
+    }
+
+    add(ms) {
+        const me = this._time.getTime();
+        this._time = new Date(me + ms);
+        return new DateWrapper(this._time);
+    }
+
+    clone() {
+        return new DateWrapper(this._time);
+    }
+
+    getTime() {
+        return this._time.getTime();
+    }
+
+    now() {
+        return new Date(this._time);
+    }
+}
+
 class Clock {
 
     /**
-     *
-     * @param {Moment} moment - moment library.
      * @param {moment} start - simulated start time for the clock. If missing,
      *     initializes clock to current wall clock.
-     * @param {number} boost - boost factor for the clock.
+     * @param {number} [boost] - boost factor for the clock.
+     * @param {boolean} [paused] - should the clock be paused after creation.
      */
-    constructor(moment, start, boost=1, paused=false) {
-        assert(moment && typeof moment.isMoment === 'function', `moment instance must be given as ctor param`);
+    constructor(start, boost=1, paused=false) {
         assert(boost !== 0);
-        this.moment = moment;
         this._boost = boost;
         this._paused = null;
         this._pausedWallClock = 0;
@@ -32,19 +68,18 @@ class Clock {
         if (!start) {
             // no start time given, use current wallclock time as starting point
             this._offset = 0;
-            this._simstart = moment.utc();
+            this._simstart = DateWrapper.utc();
         } else {
             // apply offset
-            this._offset = start.diff(this.moment.utc(), 'ms');
-            this._simstart = this.moment.utc().add(this._offset, 'ms');
+            start = DateWrapper.utc(start);
+            this._offset = start.diff(DateWrapper.utc());
+            this._simstart = DateWrapper.utc().add(this._offset);
         }
 
         if (paused) {
             this._paused = this._simstart.clone();
-            this._pausedWallClock = this.moment.utc().valueOf();
+            this._pausedWallClock = DateWrapper.utc().getTime();
         }
-
-        assert(this.moment.isMoment(this._simstart) && this._simstart.isValid());
     }
 
     /**
@@ -77,12 +112,12 @@ class Clock {
     }
 
     pause() {
-        this._paused = this.now();
-        this._pausedWallClock = this.moment.utc().valueOf();
+        this._paused = new DateWrapper(this.now());
+        this._pausedWallClock = DateWrapper.utc().getTime();
     }
 
     resume() {
-        const sleeptime = this.moment.utc().valueOf() - this._pausedWallClock;
+        const sleeptime = DateWrapper.utc().getTime() - this._pausedWallClock;
         this._offset -= sleeptime;
 
         this._paused = null;
@@ -91,18 +126,18 @@ class Clock {
 
     now() {
         if (this._paused) {
-            return this._paused.clone();
+            return this._paused.now();
         }
 
-        const simnow = this.moment.utc();
-        simnow.add(this._offset, 'ms');
+        const simnow = DateWrapper.utc();
+        simnow.add(this._offset);
 
         // milliseconds since start at normal speed
-        const delta = simnow.valueOf() - this._simstart.valueOf();
+        const delta = simnow.getTime() - this._simstart.getTime();
         // milliseconds since start at boost speed
         const boostdelta = delta * this._boost;
         // simulated time in UTC
-        const simtime = this.moment(this._simstart + boostdelta).utc();
+        const simtime = new Date(this._simstart.getTime() + boostdelta);
 
         return simtime;
     }
